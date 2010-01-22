@@ -65,8 +65,7 @@ public class Main extends Thread{
             if (!DataBaseOP.checkMD5Table(md5String)) {
                 if (tmp.length() == 0) {
                     //空資料夾 無資料的檔案
-                    //DataBaseOP.insertEmptyTable(host, tmp.getName(), tmp.getAbsolutePath());
-                    System.out.println("錯誤資訊：檔案-"+tmp.getAbsolutePath());
+                    DataBaseOP.insertEmptyFile(host, tmp.getAbsolutePath());
                 } else {
                     //文件
                     DataBaseOP.insertMD5Table(md5String, host, tmp.getName(), tmp.getAbsolutePath());
