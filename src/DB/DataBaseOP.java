@@ -27,6 +27,10 @@ public class DataBaseOP {
      */
     private static final String C_EMPTYTABLE = "CREATE TABLE `emptytable` (  `id` int(10) NOT NULL AUTO_INCREMENT,  `hostname` text NOT NULL,  `name` text NOT NULL,  `path` text NOT NULL,  PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
     /**
+     * 建立emptyfile資料表的sql指令
+     */
+    private static final String C_EMPTYFILE = "CREATE TABLE `emptyfile` (  `id` int(10) NOT NULL AUTO_INCREMENT,  `hostname` text NOT NULL,  `path` text NOT NULL,  PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
+    /**
      * 建構元 
      */
     private DataBaseOP() {
@@ -65,6 +69,8 @@ public class DataBaseOP {
             sql = DataBaseOP.C_SAMETABLE;
         } else if (tableName.equalsIgnoreCase("emptytable")){
             sql = DataBaseOP.C_EMPTYTABLE;
+        } else if (tableName.equalsIgnoreCase("emptyfile")) {
+            sql = DataBaseOP.C_EMPTYFILE;
         } else {
             return false;
         }
@@ -210,6 +216,49 @@ public class DataBaseOP {
             pstm.setString(1, host);
             pstm.setString(2, name);
             pstm.setString(3, path);
+            pstm.execute();
+            pstm.close();
+            con.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            havechange = false;
+        } finally {
+            if (null != pstm) {
+                try {
+                    pstm.close();
+                } catch (SQLException ignore) {
+                    System.out.println("close DB preparestatement error!");
+                    // ignore
+                }
+                pstm = null;
+            }
+            if (null != con) {
+                try {
+                    con.close();
+                } catch (SQLException ignore) {
+                    System.out.println("close DB connection error!");
+                    // ignore
+                }
+                con = null;
+            }
+        }
+        return havechange;
+    }
+    /**
+     * 如果為空的檔案，則新增一筆資料至emptyFile
+     * @param host 主機名稱
+     * @param path 路徑
+     * @return boolean true代表新增成功，false代表新增失敗
+     */
+    public static boolean insertEmptyFile(String host, String path) {
+        boolean havechange = false;
+        Connection con = null;
+        PreparedStatement pstm = null;
+        try {
+            con = DatabaseFactory.getInstance().getConnection();
+            pstm = con.prepareStatement("INSERT INTO `emptyfile` (`id`,`hostname`,`path`) VALUES (NULL,?,?)");
+            pstm.setString(1, host);
+            pstm.setString(2, path);
             pstm.execute();
             pstm.close();
             con.close();
