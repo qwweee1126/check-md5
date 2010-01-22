@@ -94,7 +94,7 @@ public class Main {
         }
     }
     public static void main (String[] arg) throws SQLException, IOException, NoSuchAlgorithmException {
-        DatabaseFactory.setDatabaseSettings("com.mysql.jdbc.Driver", "jdbc:mysql://localhost/md5?useUnicode=true&characterEncoding=utf8", "root", "ji394su3", 30);
+    	DatabaseFactory.setDatabaseSettings("com.mysql.jdbc.Driver", "jdbc:mysql://nas.im.ncnu.edu.tw/filepath?useUnicode=true&characterEncoding=utf8", "qwweee", "vul3ru/ ji394su3", 30);
         DatabaseFactory.getInstance();
         System.out.println("MD5Table資料表"+(DataBaseOP.createTable("md5table")?"建立完成":"存在"));
         System.out.println("SameTable資料表"+(DataBaseOP.createTable("sametable")?"建立完成":"存在"));
