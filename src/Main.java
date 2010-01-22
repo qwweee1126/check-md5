@@ -1,13 +1,14 @@
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
+import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
 
+import DB.DataBaseOP;
 import DB.DatabaseFactory;
 
 
@@ -15,23 +16,19 @@ public class Main {
     public static String DECODE = "MD5";
     public static int BYTE_LENGTH = 10240;
     private ArrayList<String> dirArr;
-    private String mvdir;
-    private HashMap<String, String> md5Hash;
-    public Main(String dir, String mvdir) {
-        this.mvdir = mvdir;
+    private String host;
+    public Main() throws IOException, NoSuchAlgorithmException {
+        this.host = InetAddress.getLocalHost().getHostName();
         dirArr = new ArrayList<String>();
-        md5Hash = new HashMap<String, String>();
-        try {
-            ReadDirectory(dir);
-            CheckMD5();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
+        File[] array = File.listRoots();
+        for (int i  = 0 ; i < array.length ; i ++ ) {
+            if (array[i].getCanonicalPath().equalsIgnoreCase("c:\\")) {
+                continue;
+            }
+            ReadDirectory(array[i]);
         }
-        System.out.println("檔案數量有："+dirArr.size()+"個檔案。");
+        CheckMD5();
+        System.out.println("檔案數量有："+NumberFormat.getIntegerInstance().format(dirArr.size())+"個檔案。");
     }
     private void CheckMD5() throws IOException, NoSuchAlgorithmException {
         for (int i = 0 ; i < dirArr.size() ; i ++) {
@@ -46,17 +43,18 @@ public class Main {
             fis.close();
             byte[] digest = md.digest();
             md5String = toHex(digest);
-            if (!md5Hash.containsKey(md5String)) {
+            if (!DataBaseOP.checkMD5Table(md5String)) {
                 if (tmp.length() == 0) {
-                    System.out.println("刪除："+tmp.getCanonicalPath());
-                    tmp.renameTo(new File(mvdir+tmp.getName()));
-                    //tmp.delete();
+                    //空資料夾
+                    //DataBaseOP.insertEmptyTable(host, tmp.getName(), tmp.getAbsolutePath());
+                    System.out.println("錯誤資訊：檔案-"+tmp.getAbsolutePath()+tmp.getName());
                 } else {
-                    md5Hash.put(md5String, tmp.getCanonicalPath());
+                    //文件
+                    DataBaseOP.insertMD5Table(md5String, host, tmp.getName(), tmp.getAbsolutePath());
                 }
             } else {
-                System.out.println("有一樣的："+md5Hash.get(md5String)+", "+tmp.getCanonicalPath());
-                tmp.renameTo(new File(mvdir+tmp.getName()));
+                //相同的檔案
+                DataBaseOP.insertSameTable(md5String, host, tmp.getName(), tmp.getAbsolutePath());
             }
         }
     }
@@ -70,29 +68,16 @@ public class Main {
             }
         return buffer.toString();
     }
-    private void ReadDirectory(String dirStr) throws IOException {
-        File dir = new File(dirStr);
+    private void ReadDirectory(File dir) throws IOException {
         if (dir.isDirectory()) {
             File[] filelist = dir.listFiles();
             if (filelist.length > 0) {
                 for (int i = 0 ; i < filelist.length ; i ++) {
-                    if (filelist[i].isDirectory()) {
-                        try {
-                            ReadDirectory(filelist[i].getCanonicalPath());
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    } else {
-                        try {
-                            dirArr.add(filelist[i].getCanonicalPath());
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
+                    ReadDirectory(filelist[i]);
                 }
             } else {
-                System.out.println("刪除："+dir.getCanonicalPath());
-                dir.renameTo(new File(mvdir+dir.getName()));
+                //空資料夾
+                DataBaseOP.insertEmptyTable(host, dir.getName(), dir.getAbsolutePath());
             }
         } else {
             try {
@@ -108,10 +93,13 @@ public class Main {
             System.out.println(dirArr.get(i));
         }
     }
-    public static void main (String[] arg) throws SQLException {
+    public static void main (String[] arg) throws SQLException, IOException, NoSuchAlgorithmException {
         DatabaseFactory.setDatabaseSettings("com.mysql.jdbc.Driver", "jdbc:mysql://localhost/md5?useUnicode=true&characterEncoding=utf8", "root", "ji394su3", 30);
         DatabaseFactory.getInstance();
-        //new Main("D:/eMule/Incoming", "D:/一樣的/");
+        System.out.println("MD5Table資料表"+(DataBaseOP.createTable("md5table")?"建立完成":"存在"));
+        System.out.println("SameTable資料表"+(DataBaseOP.createTable("sametable")?"建立完成":"存在"));
+        System.out.println("EmptyTable資料表"+(DataBaseOP.createTable("emptytable")?"建立完成":"存在"));
+        new Main();
         
     }
 }
