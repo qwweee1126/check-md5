@@ -30,6 +30,13 @@ public class Main {
         CheckMD5();
         System.out.println("檔案數量有："+NumberFormat.getIntegerInstance().format(dirArr.size())+"個檔案。");
     }
+    public Main(String dirname) throws IOException, NoSuchAlgorithmException {
+        this.host = InetAddress.getLocalHost().getHostName();
+        dirArr = new ArrayList<String>();
+        ReadDirectory(new File(dirname));
+        CheckMD5();
+        System.out.println("檔案數量有："+NumberFormat.getIntegerInstance().format(dirArr.size())+"個檔案。");
+    }
     private void CheckMD5() throws IOException, NoSuchAlgorithmException {
         for (int i = 0 ; i < dirArr.size() ; i ++) {
             String md5String = "";
@@ -99,7 +106,32 @@ public class Main {
         System.out.println("MD5Table資料表"+(DataBaseOP.createTable("md5table")?"建立完成":"存在"));
         System.out.println("SameTable資料表"+(DataBaseOP.createTable("sametable")?"建立完成":"存在"));
         System.out.println("EmptyTable資料表"+(DataBaseOP.createTable("emptytable")?"建立完成":"存在"));
-        new Main();
-        
+        new Main("C:/Downloads");
+        new Main("D:/eMule/Incoming");
+        new Main("D:/homepage");
+        new Main("D:/Hot_Produce_PassV2");
+        new Main("D:/ISO");
+        new Main("D:/john171w");
+        new Main("D:/Lineage3.1C_Installer");
+        new Main("D:/monica");
+        new Main("D:/Plants vs. Zombies");
+        new Main("D:/upload");
+        new Main("D:/一樣的");
+        new Main("D:/天堂");
+        new Main("D:/字典檔");
+        new Main("D:/重要資料");
+        new Main("D:/病毒樣本");
+        new Main("D:/專題");
+        new Main("D:/軟體");
+        new Main("D:/遊戲");
+        new Main("D:/驅動");
+        new Main("E:/整理區");
+        new Main("E:/暫存");
+        new Main("E:/綜合");
+        new Main("E:/音樂其他的");
+        new Main("E:/小說");
+        new Main("E:/Twins影片");
+        new Main("E:/MTV");
+        new Main("F:/");
     }
 }
