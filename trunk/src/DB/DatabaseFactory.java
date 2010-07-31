@@ -24,7 +24,7 @@ public class DatabaseFactory {
             DBsource.setAcquireRetryDelay(500); // 500 miliseconds wait before
             DBsource.setCheckoutTimeout(500); // 0 = wait indefinitely for new
             DBsource.setAcquireIncrement(5); // if pool is exhausted, get 5
-            DBsource.setAutomaticTestTable("connection_test_table");
+            //DBsource.setAutomaticTestTable("connection_test_table");
             DBsource.setTestConnectionOnCheckin(false);
             DBsource.setIdleConnectionTestPeriod(60); // test idle connection
             DBsource.setMaxIdleTime(100); // 0 = idle connections never expire

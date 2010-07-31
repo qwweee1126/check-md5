@@ -9,17 +9,29 @@ import java.sql.SQLException;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 
-import DB.DataBaseOP;
+import utils.Queue;
+
+import DB.DBOP;
 import DB.DatabaseFactory;
 
 
-public class Main extends Thread{
+public class Main{
     public static String DECODE = "MD5";
     public static int BYTE_LENGTH = 10240;
+    public static Queue queue;
     private ArrayList<String> dirArr;
     private String host;
+    private int emptyfile;
+    private int emptydir;
+    private int samefile;
+    private long allsize;
+    private String dirname;
     public Main() throws IOException, NoSuchAlgorithmException {
-        this.host = InetAddress.getLocalHost().getHostName();
+        emptyfile = 0;
+        emptydir = 0;
+        samefile = 0;
+        allsize = 0;
+        this.host = Config.HOST;
         dirArr = new ArrayList<String>();
         File[] array = File.listRoots();
         for (int i  = 0 ; i < array.length ; i ++ ) {
@@ -29,12 +41,20 @@ public class Main extends Thread{
             ReadDirectory(array[i]);
         }
         System.out.println("所有檔案數量有："+NumberFormat.getIntegerInstance().format(dirArr.size())+"個檔案。");
+        System.out.println(String.format("%8s : %,5d 個", "空資料夾", emptydir));
+        System.out.println(String.format("%8s : %,5d 個", "空檔案", emptyfile));
+        System.out.println(String.format("%8s : %,5d 個", "相同檔案", samefile));
+        System.out.println(String.format("%8s : %,d MB", "總共檔案大小", allsize/1000000));
     }
     public Main(String dirname) throws IOException, NoSuchAlgorithmException {
-        this.host = InetAddress.getLocalHost().getHostName();
+        emptyfile = 0;
+        emptydir = 0;
+        samefile = 0;
+        this.dirname = dirname;
+        this.host = Config.HOST;
         dirArr = new ArrayList<String>();
-        ReadDirectory(new File(dirname));
-        System.out.println(dirname+" 檔案數量有："+NumberFormat.getIntegerInstance().format(dirArr.size())+"個檔案。");
+        ReadDirectory(new File(this.dirname));
+        //queue.enQueue(this);
     }
     public void run() {
         for (int i = 0 ; i < dirArr.size() ; i ++) {
@@ -62,19 +82,31 @@ public class Main extends Thread{
                 e.printStackTrace();
             }
             md5String = toHex(digest);
-            if (!DataBaseOP.checkMD5Table(md5String)) {
+            if (!DBOP.checkMD5Table(md5String, tmp)) {
                 if (tmp.length() == 0) {
-                    //空資料夾 無資料的檔案
-                    DataBaseOP.insertEmptyFile(host, tmp.getAbsolutePath());
+                    if (tmp.isDirectory()) { //空資料夾
+                        DBOP.insertEmptyTable(host, tmp.getAbsolutePath());
+                    } else { //無資料的檔案
+                        DBOP.insertEmptyFile(host, tmp.getAbsolutePath(), tmp.getName());
+                        emptyfile++;
+                    }
                 } else {
                     //文件
-                    DataBaseOP.insertMD5Table(md5String, host, tmp.getName(), tmp.getAbsolutePath());
+                    DBOP.insertMD5Table(md5String, host, tmp.getName(), tmp.getParent(), tmp.length());
+                    allsize += tmp.length();
                 }
             } else {
                 //相同的檔案
-                DataBaseOP.insertSameTable(md5String, host, tmp.getName(), tmp.getAbsolutePath());
+                DBOP.insertSameTable(md5String, host, tmp.getName(), tmp.getParent(), tmp.length());
+                samefile++;
+                allsize += tmp.length();
             }
         }
+        System.out.println(dirname+" 檔案數量有："+NumberFormat.getIntegerInstance().format(dirArr.size())+"個檔案。");
+        System.out.println(String.format("%8s : %,5d 個", "空資料夾", emptydir));
+        System.out.println(String.format("%8s : %,5d 個", "空檔案", emptyfile));
+        System.out.println(String.format("%8s : %,5d 個", "相同檔案", samefile));
+        System.out.println(String.format("%8s : %,d MB", "總共檔案大小", allsize/1000000));
     }
     private String toHex(byte[] digest){
         StringBuffer buffer = new StringBuffer();
@@ -96,7 +128,8 @@ public class Main extends Thread{
                 }
             } else {
                 //空資料夾
-                DataBaseOP.insertEmptyTable(host, dir.getName(), dir.getAbsolutePath());
+                DBOP.insertEmptyTable(host, dir.getAbsolutePath());
+                emptydir++;
             }
         } else {
             try {
@@ -113,38 +146,38 @@ public class Main extends Thread{
         }
     }
     public static void main (String[] arg) throws SQLException, IOException, NoSuchAlgorithmException {
-    	DatabaseFactory.setDatabaseSettings("com.mysql.jdbc.Driver", "jdbc:mysql://nas.im.ncnu.edu.tw/filepath?useUnicode=true&characterEncoding=utf8", "qwweee", "vul3ru/ ji394su3", 30);
+        DBinit();
+        init();
+        ProcessQueue[] process = new ProcessQueue[Config.QUEUESIZE];
+        for (ProcessQueue tmp : process) {
+            tmp = new ProcessQueue(Main.queue);
+            tmp.start();
+        }
+        //new Main("H:/機密整理區").run();
+        new Main("H:/機密整理區").run();
+        
+    }
+    private static void init() {
+        queue = new Queue(Config.QUEUESIZE);
+    }
+    private static void DBinit() throws SQLException {
+        DatabaseFactory.setDatabaseSettings(Config.DBDRIVER, Config.DBURL, Config.DBUSER, Config.DBPASSWD, Config.DBCONN);
         DatabaseFactory.getInstance();
-        System.out.println("MD5Table資料表"+(DataBaseOP.createTable("md5table")?"建立完成":"存在"));
-        System.out.println("SameTable資料表"+(DataBaseOP.createTable("sametable")?"建立完成":"存在"));
-        System.out.println("EmptyTable資料表"+(DataBaseOP.createTable("emptytable")?"建立完成":"存在"));
-        System.out.println("EmptyFile資料表"+(DataBaseOP.createTable("emptyfile")?"建立完成":"存在"));
-        new Main("C:/Downloads").start();
-        new Main("D:/eMule/Incoming").start();
-        new Main("D:/homepage").start();
-        new Main("D:/Hot_Produce_PassV2").start();
-        new Main("D:/ISO").start();
-        new Main("D:/john171w").start();
-        new Main("D:/Lineage3.1C_Installer").start();
-        new Main("D:/monica").start();
-        new Main("D:/Plants vs. Zombies").start();
-        new Main("D:/upload").start();
-        new Main("D:/一樣的").start();
-        new Main("D:/天堂").start();
-        new Main("D:/字典檔").start();
-        new Main("D:/重要資料").start();
-        new Main("D:/病毒樣本").start();
-        new Main("D:/專題").start();
-        new Main("D:/軟體").start();
-        new Main("D:/遊戲").start();
-        new Main("D:/驅動").start();
-        new Main("E:/整理區").start();
-        new Main("E:/暫存").start();
-        new Main("E:/綜合").start();
-        new Main("E:/音樂其他的").start();
-        new Main("E:/小說").start();
-        new Main("E:/Twins影片").start();
-        new Main("E:/MTV").start();
-        new Main("F:/").start();
+        System.out.println("MD5Table資料表"+(DBOP.createTable("md5table")?"建立完成":"存在"));
+        System.out.println("SameTable資料表"+(DBOP.createTable("sametable")?"建立完成":"存在"));
+        System.out.println("EmptyTable資料表"+(DBOP.createTable("emptytable")?"建立完成":"存在"));
+        System.out.println("EmptyFile資料表"+(DBOP.createTable("emptyfile")?"建立完成":"存在"));
+    }
+}
+class ProcessQueue extends Thread{
+    private Queue queue;
+    public ProcessQueue(Queue queue) {
+        this.queue = queue;
+    }
+    public void run() {
+        while (queue.getSize() != 0) {
+            Main task = (Main)queue.deQueue();
+            task.run();
+        }
     }
 }
