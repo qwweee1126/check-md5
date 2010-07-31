@@ -10,6 +10,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import Config.Config;
+
 /**
  * @author bbxp
  * 資料庫的操作function
